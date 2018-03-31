@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"math"
 	"math/rand"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -52,8 +54,6 @@ const numForLave = 7 /* Lave is 7th generated planet in galaxy one */
 const numforZaonce = 129
 const numforDiso = 147
 const numforRied = 46
-
-var galaxy [galSize]planSys /* Need 0 to galsize-1 inclusive */
 
 //var seed seedType
 var rndSeed fastSeed
@@ -114,7 +114,7 @@ type gameState struct {
 
 	// Galaxy
 	galaxyNum uint
-	galaxy    uint
+	galaxy    []planSys /* Need 0 to galsize-1 inclusive */
 
 	// Current System
 
@@ -128,6 +128,10 @@ type gameState struct {
 	holdSpace uint
 	fuelCost  int
 	maxFuel   int
+}
+
+type elite struct {
+	state gameState
 }
 
 func newGameState() gameState {
@@ -365,18 +369,29 @@ func newMarket(fluct uint, p planSys) market {
 	return market
 }
 
-func (gs *gameState) displaymarket(m market) {
+func (gs *gameState) displaymarket() bool {
 
 	marketCommodities := commodities()
 
 	for i := 0; i <= lastTrade; i++ {
 		fmt.Printf("\n")
-		fmt.Printf("%s", marketCommodities[i].name)
-		fmt.Printf("   %.1f", float32((m.price[i]))/10)
-		fmt.Printf("   %d", m.quantity[i])
+
+		if len(marketCommodities[i].name) <= 6 {
+			fmt.Printf("%s\t", marketCommodities[i].name)
+		} else {
+			fmt.Printf("%s", marketCommodities[i].name)
+		}
+
+		fmt.Printf("\t%.1f", float32((gs.localMarket.price[i]))/10)
+		fmt.Printf("\t%d", gs.localMarket.quantity[i])
 		fmt.Printf("%s", unitNames[marketCommodities[i].units])
-		fmt.Printf("   %d", gs.shipsHold[i])
+		fmt.Printf("\t%d", gs.shipsHold[i])
 	}
+
+	fmt.Printf("\n\nFuel: %.1f", float32(gs.fuel/10))
+	fmt.Printf("\tHoldspace: %dt", gs.holdSpace)
+
+	return true
 }
 
 // COMMANDS
@@ -390,10 +405,141 @@ var validCommands = []string{"buy", "sell", "fuel", "jump", "cash", "mkt", "help
 func (gs *gameState) commands() map[string]interface{} {
 
 	commandmap := map[string]interface{}{
-		"buy": gs.buy,
+		"buy":    gs.buy,
+		"hold":   gs.hold,
+		"sell":   gs.sell,
+		"fuel":   gs.manageFuel,
+		"jump":   gs.jump,
+		"cash":   gs.manageCash,
+		"mkt":    gs.displaymarket,
+		"help":   gs.help,
+		"sneak":  gs.sneak,
+		"local":  gs.local,
+		"galhyp": gs.galhyp,
+		"info":   gs.info,
+		"quit":   gs.quit,
+		"rand":   gs.useWeakRand,
 	}
 
 	return commandmap
+}
+
+func (gs *gameState) help() bool {
+	fmt.Printf("\nCommands are:")
+	fmt.Printf("\nBuy   tradegood ammount")
+	fmt.Printf("\nSell  tradegood ammount")
+	fmt.Printf("\nFuel  ammount    (buy ammount LY of fuel)")
+	fmt.Printf("\nJump  planetname (limited by fuel)")
+	fmt.Printf("\nSneak planetname (any distance - no fuel cost)")
+	fmt.Printf("\nGalhyp           (jumps to next galaxy)")
+	fmt.Printf("\nInfo  planetname (prints info on system")
+	fmt.Printf("\nMkt              (shows market prices)")
+	fmt.Printf("\nLocal            (lists systems within 7 light years)")
+	fmt.Printf("\nCash number      (alters cash - cheating!)")
+	fmt.Printf("\nHold number      (change cargo bay)")
+	fmt.Printf("\nQuit or ^C       (exit)")
+	fmt.Printf("\nHelp             (display this text)")
+	fmt.Printf("\nRand             (toggle RNG)")
+	fmt.Printf("\n\nAbbreviations allowed eg. b fo 5 = Buy Food 5, m= Mkt")
+
+	return true
+}
+
+func (gs *gameState) local() bool {
+
+	fmt.Printf("Galaxy number %d", gs.galaxyNum)
+
+	for syscount := 0; syscount < galSize; syscount++ {
+		d := distance(gs.galaxy[syscount], gs.galaxy[gs.currentPlanet]) 
+		if d <= uint(gs.maxFuel) {
+			if d <= gs.fuel {
+				fmt.Printf("\n * ")
+			} else {
+				fmt.Printf("\n - ")
+			}
+
+			printSys(gs.galaxy[syscount], true)
+			
+			fmt.Printf(" (%.1f LY)", (float64(d) / float64(10)))
+		}
+	}
+
+	return true
+}
+
+func (gs *gameState) manageFuel(ammount string) bool {
+
+	x, _ := strconv.Atoi(string(ammount))
+
+	f := uint(x)
+
+	if f+gs.fuel > uint(gs.maxFuel) {
+		f = uint(gs.maxFuel) - gs.fuel
+	}
+
+	if gs.fuelCost > 0 {
+		fmt.Printf("Cash: %d\n", gs.cash)
+		fmt.Printf("Fuel Cost: %d", gs.fuelCost)
+
+		if int32(f)*int32(gs.fuelCost) > gs.cash {
+
+			f = uint(gs.cash / int32(gs.fuelCost))
+		}
+	}
+
+	fmt.Printf("F: %d", f)
+	gs.fuel += f
+	gs.cash -= int32(gs.fuelCost) * int32(f)
+
+	if f == 0 {
+		fmt.Println("\n Can't buy any fuel")
+	} else {
+		fmt.Printf("\nBuying %.1dLY fuel", f/10)
+	}
+
+	return true
+}
+
+func (gs *gameState) manageCash(transaction string) bool {
+
+	var ammount float64
+	op := string(transaction[0])
+
+	if op != "+" && op != "-" {
+		fmt.Println("Invlaid Operation")
+		return false
+	}
+
+	tmpFloat, ferr := strconv.ParseFloat(string(transaction[1:]), 64)
+
+	if ferr == nil {
+		ammount = math.Floor(10 * tmpFloat)
+	} else {
+		ammount = 0
+	}
+
+	if op == "+" {
+		gs.cash += int32(ammount)
+	}
+
+	if op == "-" {
+		gs.cash -= int32(ammount)
+	}
+
+	return true
+}
+
+func (gs *gameState) buyFuel(ammount string) bool /* Attempt to buy f tonnes of fuel */ {
+
+	return true
+}
+
+func (gs *gameState) quit() {
+	os.Exit(0)
+}
+
+func (gs *gameState) useWeakRand() {
+	gs.useNativeRand = !gs.useNativeRand
 }
 
 // Implementations for each command
@@ -407,9 +553,9 @@ func (gs *gameState) buy(good string, amount string) bool {
 
 	if err != nil || amountToBuy == 0 {
 		amountToBuy = 1
-	} else {
-		return false
 	}
+
+	fmt.Println(amountToBuy)
 
 	isGood, goodIdx := strInArray(goodsNames(), good)
 
@@ -496,9 +642,65 @@ func (gs *gameState) sell(good string, amount string) bool {
 	return true
 }
 
+func (gs *gameState) jump(s string) bool {
+
+	var d uint
+
+	dest := gs.matchSys(s)
+	if dest == gs.currentPlanet {
+		fmt.Println("\nBad jump")
+		return false
+	}
+
+	d = distance(gs.galaxy[dest], gs.galaxy[gs.currentPlanet])
+	if d > gs.fuel {
+		fmt.Println("\nJump to far")
+		return false
+	}
+
+	gs.fuel -= d
+
+	gs.currentPlanet = dest
+	gs.localMarket = newMarket(gs.randByte(), gs.galaxy[dest])
+
+	printSys(gs.galaxy[gs.currentPlanet], false)
+
+	return true
+}
+
+func (gs *gameState) sneak(s string) bool {
+
+	currentFuel := gs.fuel
+	gs.fuel = 666
+
+	b := gs.jump(s)
+
+	gs.fuel = currentFuel
+
+	return b
+}
+
+/* Preserve planetnum (eg. if leave 7th planet
+   arrive at 7th planet)
+   Classic Elite always jumped to planet nearest (0x60,0x60)
+*/
+func (gs *gameState) galhyp() bool { /* Jump to next galaxy */
+
+	gs.galaxyNum++
+
+	if gs.galaxyNum == 9 {
+		gs.galaxyNum = 1
+	}
+
+	gs.galaxy = buildGalaxy(gs.galaxyNum)
+
+	return true
+}
+
 // Uses reflection to call the function specified in the passed map.
 func doCmd(m map[string]interface{}, name string, params ...interface{}) (result []reflect.Value, err error) {
 	f := reflect.ValueOf(m[name])
+	fmt.Println(name)
 	if len(params) != f.Type().NumIn() {
 		err = errors.New("The number of params is not adapted")
 		return
@@ -511,12 +713,87 @@ func doCmd(m map[string]interface{}, name string, params ...interface{}) (result
 	return
 }
 
+func (gs *gameState) matchSys(s string) planetNum {
+	/* Return id of the planet whose name matches passed strinmg
+	   closest to currentplanet - if none return currentplanet */
+	//var sysCount planetNum
+	var p planetNum
+	var sysCount planetNum
+
+	p = gs.currentPlanet
+
+	var d uint = 9999
+
+	for sysCount = 0; sysCount < galSize; sysCount++ {
+		if strings.HasPrefix(s, gs.galaxy[sysCount].name) {
+			if distance(gs.galaxy[sysCount], gs.galaxy[gs.currentPlanet]) < d {
+				p = sysCount
+			}
+		}
+	}
+
+	return p
+}
+
+func distance(a planSys, b planSys) uint {
+	/* Seperation between two planets (4*sqrt(X*X+Y*Y/4)) */
+
+	// return (uint)ftoi(4*sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y)/4));
+	ax := float64(a.x) 
+	ay := float64(a.y) 
+
+	bx := float64(b.x) 
+	by := float64(b.y) 
+	d := 4 * math.Sqrt((ax-bx)*(ax-bx)+(ay-by)*(ay-by)/4)
+
+
+	return uint(d)
+}
+
+func (gs *gameState) info(s string) bool {
+
+	dest := gs.matchSys(s)
+	printSys(gs.galaxy[dest], false)
+
+	return true
+}
+
+func (gs *gameState) hold(s string) bool {
+
+	a, err := strconv.Atoi(s)
+
+	if err != nil {
+		return false
+	}
+
+	var t uint
+
+	allCommodities := commodities()
+
+	for i := 0; i < len(allCommodities); i++ {
+
+		if allCommodities[i].units == UNIT_TONNES {
+			t += gs.shipsHold[i]
+		}
+	}
+
+	if t > uint(a) {
+		fmt.Printf("\nHold to full")
+		return false
+	}
+
+	gs.holdSpace = uint(a) - t
+
+	return true
+}
+
 // Obey command s
 func (gs *gameState) parser(s string) bool {
 
 	var reflectRet []reflect.Value
 	var err error
 
+	s = strings.ToLower(s)
 	cmdArr := strings.Split(s, " ")
 
 	cmd := cmdArr[0]
@@ -552,16 +829,22 @@ func (gs *gameState) parser(s string) bool {
 
 	} else {
 		fmt.Println("Unknown Command")
+		return false
 	}
 
 	if err != nil {
 		fmt.Println("Command returned an error: " + err.Error())
 		return false
 	}
+
 	return reflectRet[0].Bool()
 }
 
-func (gs *gameState) myrand() int {
+func (gs *gameState) mySRand(seed int) {
+	gs.lastRand = seed - 1
+}
+
+func (gs *gameState) myRand() int {
 	var r int
 
 	if gs.useNativeRand {
@@ -571,7 +854,7 @@ func (gs *gameState) myrand() int {
 		r = (((((((((((gs.lastRand << 3) - gs.lastRand) << 3) + gs.lastRand) << 1) + gs.lastRand) << 4) - gs.lastRand) << 1) - gs.lastRand) + 0xe60) & 0x7fffffff
 		gs.lastRand = r - 1
 	}
-	return (r)
+	return r
 }
 
 func myMin(a uint, b uint) uint {
@@ -583,6 +866,10 @@ func myMin(a uint, b uint) uint {
 }
 
 // PRNG
+
+func (gs *gameState) randByte() uint {
+	return uint(gs.myRand()) & 0xFF
+}
 
 func newFastSeed(a, b, c, d uint8) fastSeed {
 	var fs fastSeed
@@ -658,7 +945,7 @@ func newPlanSys(s *seed) planSys {
 		ps.economy = (ps.economy | 2)
 	}
 
-	ps.techLev = uint((s.w1 >> 8) & 0x03)
+	ps.techLev = uint((s.w1 >> 8) & 0x03) + uint(ps.economy^0x07)
 	//ps.techLev = uint(math.Floor(float64(((s.w1 >> 8) & 0x03)) + float64(ps.economy^0x07)))
 
 	ps.techLev += ps.govType >> 1
@@ -901,7 +1188,7 @@ func nextgalaxy(s *seed) seed { /* Apply to base seed; once for galaxy 2  */
 }
 
 /* Original game generated from scratch each time info needed */
-func buildgalaxy(galaxynum uint) []planSys {
+func buildGalaxy(galaxynum uint) []planSys {
 
 	gal := make([]planSys, galSize)
 
@@ -938,15 +1225,69 @@ func testing() {
 	//gameState := newGameState()
 	//fmt.Println(gameState.parser("buy firearms 3"))
 
-	myGal := buildgalaxy(1)
+	myGal := buildGalaxy(1)
 
 	fmt.Println("System 7 is:   " + myGal[7].name)
 	fmt.Println("System 7 Desc: " + myGal[7].description)
 }
 
+func newElite() elite {
+	/* 6502 Elite fires up at Lave with fluctuation=00
+	   and these prices tally with the NES ones.
+	   However, the availabilities reside in the saved game data.
+	   Availabilities are calculated (and fluctuation randomised)
+	   on hyperspacing
+	   I have checked with this code for Zaonce with fluctaution &AB
+	   against the SuperVision 6502 code and both prices and availabilities tally.
+	*/
+
+	//testing()
+	var elite elite
+
+	elite.state = newGameState()
+
+	elite.state.useNativeRand = true
+	elite.state.mySRand(12345) /* Ensure repeatability */
+
+	elite.state.useNativeRand = true
+
+	fmt.Printf("\nWelcome to Text Elite 1.5.\n")
+
+	for i := 0; i <= lastTrade; i++ {
+
+	}
+
+	elite.state.galaxyNum = 1
+	elite.state.galaxy = buildGalaxy(elite.state.galaxyNum)
+
+	elite.state.currentPlanet = numForLave /* Don't use jump */
+
+	elite.state.localMarket = newMarket(0x00, elite.state.galaxy[numForLave])
+	elite.state.fuel = uint(elite.state.maxFuel)
+
+	elite.state.parser("hold 20") /* Small cargo bay */
+	elite.state.parser("cash +100")
+	elite.state.parser("help")
+
+	fmt.Printf("\n\nCash :%d> ", elite.state.cash/10)
+
+	return elite
+}
+
+func (elite *elite) command(cmd string) {
+	elite.state.parser(cmd)
+
+	fmt.Printf("\n\nCash :%d> ", elite.state.cash/10)
+}
+
 func main() {
+	game := newElite()
 
-	fmt.Println("Welcome to Text Elite 1.5.\n")
-
-	testing()
+	for {
+		reader := bufio.NewReader(os.Stdin)
+		newCmd, _ := reader.ReadString('\n')
+		newCmd = strings.TrimSpace(newCmd)
+		fmt.Println("COMMAND ENTERED: " + newCmd)
+		game.command(newCmd)
+	}
 }
