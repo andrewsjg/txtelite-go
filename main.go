@@ -494,7 +494,7 @@ func (gs *gameState) manageFuel(ammount string) bool {
 	if f == 0 {
 		fmt.Println("\n Can't buy any fuel")
 	} else {
-		fmt.Printf("\nBuying %.1dLY fuel", f/10)
+		fmt.Printf("\nBuying %.1dLY fuel", float64(f)/float64(10))
 	}
 
 	return true
@@ -647,12 +647,14 @@ func (gs *gameState) jump(s string) bool {
 	var d uint
 
 	dest := gs.matchSys(s)
+
 	if dest == gs.currentPlanet {
 		fmt.Println("\nBad jump")
 		return false
 	}
 
 	d = distance(gs.galaxy[dest], gs.galaxy[gs.currentPlanet])
+
 	if d > gs.fuel {
 		fmt.Println("\nJump to far")
 		return false
@@ -724,9 +726,19 @@ func (gs *gameState) matchSys(s string) planetNum {
 
 	var d uint = 9999
 
+	/*
+		{	if (distance(galaxy[syscount],galaxy[currentplanet])<d)
+			{ d=distance(galaxy[syscount],galaxy[currentplanet]);
+			  p=syscount;
+			}
+		  }
+	 	} */
+
 	for sysCount = 0; sysCount < galSize; sysCount++ {
-		if strings.HasPrefix(s, gs.galaxy[sysCount].name) {
+		if strings.HasPrefix(strings.ToUpper(s), gs.galaxy[sysCount].name) {
 			if distance(gs.galaxy[sysCount], gs.galaxy[gs.currentPlanet]) < d {
+
+				d = distance(gs.galaxy[sysCount], gs.galaxy[gs.currentPlanet])
 				p = sysCount
 			}
 		}
