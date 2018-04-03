@@ -388,7 +388,7 @@ func (gs *gameState) displaymarket() bool {
 		fmt.Printf("\t%d", gs.shipsHold[i])
 	}
 
-	fmt.Printf("\n\nFuel: %.1f", float32(gs.fuel/10))
+	fmt.Printf("\n\nFuel: %.1f", float32(gs.fuel)/10)
 	fmt.Printf("\tHoldspace: %dt", gs.holdSpace)
 
 	return true
@@ -471,7 +471,7 @@ func (gs *gameState) manageFuel(ammount string) bool {
 
 	x, _ := strconv.Atoi(string(ammount))
 
-	f := uint(x)
+	f := uint(x) * 10
 
 	if f+gs.fuel > uint(gs.maxFuel) {
 		f = uint(gs.maxFuel) - gs.fuel
@@ -479,7 +479,7 @@ func (gs *gameState) manageFuel(ammount string) bool {
 
 	if gs.fuelCost > 0 {
 		fmt.Printf("Cash: %d\n", gs.cash)
-		fmt.Printf("Fuel Cost: %d", gs.fuelCost)
+		fmt.Printf("Fuel Cost: %d\n", gs.fuelCost)
 
 		if int32(f)*int32(gs.fuelCost) > gs.cash {
 
@@ -494,7 +494,7 @@ func (gs *gameState) manageFuel(ammount string) bool {
 	if f == 0 {
 		fmt.Println("\n Can't buy any fuel")
 	} else {
-		fmt.Printf("\nBuying %.1dLY fuel", float64(f)/float64(10))
+		fmt.Printf("\nBuying %.1fLY fuel", float64(f)/float64(10))
 	}
 
 	return true
@@ -1096,7 +1096,7 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 					arg3 = 1
 				}
 				if rnd >= 0xCC {
-					arg3 = 1
+					arg4 = 1
 				}
 				out += ps.goatSoup(desc_list[c-0x81][arg1+arg2+arg3+arg4], prng)
 			} else {
