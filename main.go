@@ -450,7 +450,7 @@ func (gs *gameState) local() bool {
 	fmt.Printf("Galaxy number %d", gs.galaxyNum)
 
 	for syscount := 0; syscount < galSize; syscount++ {
-		d := distance(gs.galaxy[syscount], gs.galaxy[gs.currentPlanet]) 
+		d := distance(gs.galaxy[syscount], gs.galaxy[gs.currentPlanet])
 		if d <= uint(gs.maxFuel) {
 			if d <= gs.fuel {
 				fmt.Printf("\n * ")
@@ -459,7 +459,7 @@ func (gs *gameState) local() bool {
 			}
 
 			printSys(gs.galaxy[syscount], true)
-			
+
 			fmt.Printf(" (%.1f LY)", (float64(d) / float64(10)))
 		}
 	}
@@ -739,13 +739,12 @@ func distance(a planSys, b planSys) uint {
 	/* Seperation between two planets (4*sqrt(X*X+Y*Y/4)) */
 
 	// return (uint)ftoi(4*sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y)/4));
-	ax := float64(a.x) 
-	ay := float64(a.y) 
+	ax := float64(a.x)
+	ay := float64(a.y)
 
-	bx := float64(b.x) 
-	by := float64(b.y) 
+	bx := float64(b.x)
+	by := float64(b.y)
 	d := 4 * math.Sqrt((ax-bx)*(ax-bx)+(ay-by)*(ay-by)/4)
-
 
 	return uint(d)
 }
@@ -945,7 +944,7 @@ func newPlanSys(s *seed) planSys {
 		ps.economy = (ps.economy | 2)
 	}
 
-	ps.techLev = uint((s.w1 >> 8) & 0x03) + uint(ps.economy^0x07)
+	ps.techLev = uint((s.w1>>8)&0x03) + uint(ps.economy^0x07)
 	//ps.techLev = uint(math.Floor(float64(((s.w1 >> 8) & 0x03)) + float64(ps.economy^0x07)))
 
 	ps.techLev += ps.govType >> 1
@@ -1048,8 +1047,8 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 		/* A3 */ {"ice", "mud", "Zero-G", "vacuum", "\xB1 ultra"},
 		/* A4 */ {"hockey", "cricket", "karate", "polo", "tennis"},
 		/* B0 = <planet name>
-		 *  B1 = <planet name>ian
-		 *  B2 = <random name>
+		 * B1 = <planet name>ian
+		 * B2 = <random name>
 		 */
 	}
 
@@ -1160,7 +1159,7 @@ func printSys(plsy planSys, compressed bool) {
 
 		rndSeed := plsy.goatSoupSeed
 		fmt.Printf("\n")
-		fmt.Printf(plsy.description)
+		//fmt.Printf(plsy.description)
 		fmt.Printf(plsy.goatSoup("\x8F is \x97.", rndSeed))
 
 	}
