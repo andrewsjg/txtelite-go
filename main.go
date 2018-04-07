@@ -893,25 +893,78 @@ func newFastSeed(a, b, c, d uint8) fastSeed {
 	return fs
 }
 
-func (fs *fastSeed) next() uint8 {
-	x := (fs.a << 1) & 0xFF
-	a := x + fs.c
+func (fs *fastSeed) next() int {
+
+	var a int
+
+	fmt.Printf("\nseed a: %d seed b: %d seed c: %d seed d: %d\n", fs.a, fs.b, fs.c, fs.d)
+
+	x := (fs.a * 2) & 0xFF
+	fmt.Printf("X: %d\n", x)
+	fmt.Printf("fs.c: %d\n", fs.c)
+	fmt.Printf("x + c: %d\n", int(x)+int(fs.c))
+
+	a = int(x) + int(fs.c)
+	fmt.Printf("a1: %d\n", a)
 
 	if fs.a > 127 {
 		a++
 	}
 
-	fs.a = a & 0xFF
+	fs.a = uint8(a & 0xFF)
 	fs.c = x
 
 	a = a >> 8 // a = any carry left from above
+	fmt.Printf("a2: %d\n", a)
+
 	x = fs.b
-	a = (a + x + fs.d) & 0xFF
-	fs.b = a
+	a = (a + int(x) + int(fs.d)) & 0xFF
+	fmt.Printf("a3: %d\n", a)
+	fs.b = uint8(a)
 	fs.d = x
 
+	fmt.Printf("RND NO: %d\n", a)
 	return a
 }
+
+/*
+
+
+var x = (this.a << 1) & 0xFF;
+        var a = x + this.c;
+        if (this.a > 127) {
+            a += 1;
+        }
+        this.a = a & 0xFF;
+        this.c = x;
+
+        a = a >> 8;
+        x = this.b;
+        a = (a + x + this.d) & 0xFF;
+        this.b = a;
+        this.d = x;
+		return a;
+
+
+
+int gen_rnd_number (void)
+{	int a,x;
+	x = (rnd_seed.a * 2) & 0xFF;
+	a = x + rnd_seed.c;
+	if (rnd_seed.a > 127)	a++;
+	rnd_seed.a = a & 0xFF;
+	rnd_seed.c = x;
+
+	a = a / 256;	// a = any carry left from above
+	x = rnd_seed.b;
+	a = (a + x + rnd_seed.d) & 0xFF;
+	rnd_seed.b = a;
+	rnd_seed.d = x;
+
+  printf("\nRND NO: %u\n", a);
+	return a;
+}
+*/
 
 func newSeed(w0, w1, w2 uint16) seed {
 	var newseed seed
@@ -926,7 +979,7 @@ func newSeed(w0, w1, w2 uint16) seed {
 func (s *seed) tweakSeed() {
 	var temp uint16
 
-	temp = ((s.w0) + (s.w1) + (s.w2)) & 0xFFFF // 2 Byte arithmetic
+	temp = ((s.w0) + (s.w1) + (s.w2)) //& 0xFFFF // 2 Byte arithmetic
 	s.w0 = s.w1
 	s.w1 = s.w2
 	s.w2 = temp
@@ -977,6 +1030,7 @@ func newPlanSys(s *seed) planSys {
 	// Seed for "goat soup" description
 	ps.goatSoupSeed = newFastSeed(uint8(s.w1&0xFF), uint8(s.w1>>8), uint8(s.w2&0xFF), uint8(s.w2>>8))
 
+	//fmt.Println(ps.goatSoupSeed)
 	// Name
 
 	pair1 := ((s.w2 >> 8) & 0x1F) << 1
@@ -1098,14 +1152,30 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 				if rnd >= 0xCC {
 					arg4 = 1
 				}
+
+				/*
+					fmt.Println(desc_list[c-0x81])
+					fmt.Printf("a1: %d a2: %d a3: %d a4: %d\n", arg1, arg2, arg3, arg4)
+					fmt.Printf("a1+a2+a3+a4: %d\n", arg1+arg2+arg3+arg4)
+					fmt.Printf("Selection: %s\n", desc_list[c-0x81][arg1+arg2+arg3+arg4])
+				*/
+
 				out += ps.goatSoup(desc_list[c-0x81][arg1+arg2+arg3+arg4], prng)
+
 			} else {
 				switch c {
 				case 0xB0: /* planet name */
 
 					out += fmt.Sprintf("%s", strings.ToLower(string(ps.name[0])))
 
+					/*
+						for i := 1; i < len(ps.name); i++ {
+							out += fmt.Sprintf("%s", strings.ToLower(string(ps.name[i])))
+						}
+					*/
+
 					for i := 1; i < len(ps.name); i++ {
+
 						out += fmt.Sprintf("%s", strings.ToLower(string(ps.name[i])))
 					}
 					break
@@ -1124,7 +1194,7 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 
 					len := prng.next() & 3
 
-					for i := 0; uint8(i) <= len; i++ {
+					for i := 0; int(i) <= len; i++ {
 
 						x := prng.next() & 0x3e
 						if i == 0 {
@@ -1185,7 +1255,8 @@ func rotatel(x uint16) uint16 { /* rotate 8 bit number leftwards */
 }
 
 func twist(x uint16) uint16 {
-	return (uint16)((256 * rotatel(x>>8)) + rotatel(x&255))
+	//return (uint16)((256 * rotatel(x>>8)) + rotatel(x&255))
+	return ((256 * rotatel(x>>8)) + rotatel(x&255))
 }
 
 func nextgalaxy(s *seed) seed { /* Apply to base seed; once for galaxy 2  */
@@ -1208,6 +1279,7 @@ func buildGalaxy(galaxynum uint) []planSys {
 
 	for galcount := 1; uint(galcount) < galaxynum; galcount++ {
 		galSeed = nextgalaxy(&galSeed)
+		//fmt.Println(galSeed)
 	}
 
 	/* Put galaxy data into array of structures */
