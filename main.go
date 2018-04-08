@@ -897,15 +897,15 @@ func (fs *fastSeed) next() int {
 
 	var a int
 
-	fmt.Printf("\nseed a: %d seed b: %d seed c: %d seed d: %d\n", fs.a, fs.b, fs.c, fs.d)
+	//fmt.Printf("\nseed a: %d seed b: %d seed c: %d seed d: %d\n", fs.a, fs.b, fs.c, fs.d)
 
 	x := (fs.a * 2) & 0xFF
-	fmt.Printf("X: %d\n", x)
-	fmt.Printf("fs.c: %d\n", fs.c)
-	fmt.Printf("x + c: %d\n", int(x)+int(fs.c))
+	//fmt.Printf("X: %d\n", x)
+	//fmt.Printf("fs.c: %d\n", fs.c)
+	//fmt.Printf("x + c: %d\n", int(x)+int(fs.c))
 
 	a = int(x) + int(fs.c)
-	fmt.Printf("a1: %d\n", a)
+	//fmt.Printf("a1: %d\n", a)
 
 	if fs.a > 127 {
 		a++
@@ -915,15 +915,15 @@ func (fs *fastSeed) next() int {
 	fs.c = x
 
 	a = a >> 8 // a = any carry left from above
-	fmt.Printf("a2: %d\n", a)
+	//fmt.Printf("a2: %d\n", a)
 
 	x = fs.b
 	a = (a + int(x) + int(fs.d)) & 0xFF
-	fmt.Printf("a3: %d\n", a)
+	//fmt.Printf("a3: %d\n", a)
 	fs.b = uint8(a)
 	fs.d = x
 
-	fmt.Printf("RND NO: %d\n", a)
+	//fmt.Printf("RND NO: %d\n", a)
 	return a
 }
 
@@ -1118,7 +1118,7 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 		 */
 	}
 
-	//fmt.Println(desc_list)
+	fmt.Println("source: " + source)
 	out = ""
 
 	for {
@@ -1129,10 +1129,16 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 		c := source[0]
 		source = source[1:]
 
+		fmt.Printf("\nC is: %x\n", c)
+
 		if c < 0x80 {
+			fmt.Println("C is less than 0x80")
 			out += fmt.Sprintf("%c", c)
+
 		} else {
+
 			if c <= 0xA4 {
+				fmt.Println("C is less or equal to 0xA4")
 				var rnd = prng.next()
 
 				arg1 := 0
@@ -1163,6 +1169,8 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 				out += ps.goatSoup(desc_list[c-0x81][arg1+arg2+arg3+arg4], prng)
 
 			} else {
+				fmt.Println("TEST")
+				fmt.Println(c)
 				switch c {
 				case 0xB0: /* planet name */
 
