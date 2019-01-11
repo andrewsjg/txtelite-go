@@ -1077,6 +1077,8 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 
 	var out string
 
+	pairs0 = pairs0 + "\x00" + pairs
+
 	desc_list := [][]string{
 		/* 81 0*/ {"fabled", "notable", "well known", "famous", "noted"},
 		/* 82 1*/ {"very", "mildly", "most", "reasonably", ""},
@@ -1128,6 +1130,7 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 			break
 		}
 
+		fmt.Println(source)
 		c := source[0]
 		source = source[1:]
 		if strings.Contains(source, "0xB1") {
@@ -1137,7 +1140,7 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 		fmt.Printf("\nC is: %d \n", int(c))
 
 		if c < 0x80 {
-			fmt.Println("C is less than 0x80")
+			// fmt.Println("C is less than 0x80")
 			out += fmt.Sprintf("%c", c)
 
 		} else {
@@ -1164,35 +1167,18 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 					arg4 = 1
 				}
 
-				/*
-					fmt.Println(desc_list[c-0x81])
-					fmt.Printf("a1: %d a2: %d a3: %d a4: %d\n", arg1, arg2, arg3, arg4)
-					fmt.Printf("a1+a2+a3+a4: %d\n", arg1+arg2+arg3+arg4)
-					fmt.Printf("Selection: %s\n", desc_list[c-0x81][arg1+arg2+arg3+arg4])
-				*/
-
-				//fmt.Printf("\nItem: %d Col: %d, String: %s\n", c-0x81, arg1+arg2+arg3+arg4, desc_list[c-0x81][arg1+arg2+arg3+arg4])
-				//fmt.Printf("PRNG SEED: %d,%d,%d,%d\n", prng.a, prng.b, prng.c, prng.d)
-				//fmt.Printf("rnd: %d\n", rnd)
 				fmt.Printf("About to recurse with PRNG values: a=%d, b=%d, c=%d, d=%d\n", prng.a, prng.b, prng.c, prng.d)
 				out += ps.goatSoup(desc_list[c-0x81][arg1+arg2+arg3+arg4], prng)
 				fmt.Println(out)
 
 			} else {
-
+				fmt.Println("RUNNING ELSE")
 				switch c {
 				case 0xB0: /* planet name */
 
 					out += fmt.Sprintf("%s", strings.ToLower(string(ps.name[0])))
 
-					/*
-						for i := 1; i < len(ps.name); i++ {
-							out += fmt.Sprintf("%s", strings.ToLower(string(ps.name[i])))
-						}
-					*/
-
 					for i := 1; i < len(ps.name); i++ {
-
 						out += fmt.Sprintf("%s", strings.ToLower(string(ps.name[i])))
 					}
 					break
@@ -1214,13 +1200,29 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 					for i := 0; int(i) <= len; i++ {
 
 						x := prng.next() & 0x3e
-						if i == 0 {
-							out += fmt.Sprintf("%s", string(pairs0[x]))
-						} else {
-							out += fmt.Sprintf("%s", strings.ToLower(string(pairs0[x])))
+						if pairs0[x] != '.' {
+							out += fmt.Sprintf("%c", pairs0[x])
 						}
 
-						out += fmt.Sprintf("%s", strings.ToLower(string(pairs0[x+1])))
+						var isnotdot = false
+
+						if pairs0[x+1] != '.' {
+							isnotdot = true
+						}
+
+						if (i != 0) && isnotdot {
+							out += fmt.Sprintf("%c", pairs0[x+1])
+						}
+
+						/*
+							if i == 0 {
+								out += fmt.Sprintf("%s", string(pairs0[x]))
+							} else {
+								out += fmt.Sprintf("%s", strings.ToLower(string(pairs0[x])))
+							}
+
+							out += fmt.Sprintf("%s", strings.ToLower(string(pairs0[x+1]))) */
+
 					}
 					break
 
