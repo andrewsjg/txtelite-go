@@ -87,11 +87,16 @@ const base2 = 0xB753 /* Base seed for galaxy 1 */
 //							 "EDORQUANTEISRION";
 
 // 1.5 planet names fix
-var pairs0 = "ABOUSEITILETSTONLONUTHNOALLEXEGEZACEBISOUSESARMAINDIREA.ERATENBERALAVETIEDORQUANTEISRION"
-var pairs = "..LEXEGEZACEBISO" +
-	"USESARMAINDIREA." +
-	"ERATENBERALAVETI" +
-	"EDORQUANTEISRION" /* Dots should be nullprint characters */
+//var pairs0 = "ABOUSEITILETSTONLONUTHNOALLEXEGEZACEBISOUSESARMAINDIREA.ERATENBERALAVETIEDORQUANTEISRION"
+var pairs0 = "ABOUSEITILETSTONLONUTHNO"
+
+//var pairs = "..LEXEGEZACEBISO" +
+var pairs = "..LEXEGEZACEBISOUSESARMAINDIREA.ERATENBERALAVETIEDORQUANTEISRION"
+var pairs1 = pairs0 + pairs
+
+//	"USESARMAINDIREA." +
+//	"ERATENBERALAVETI" +
+//	"EDORQUANTEISRION" /* Dots should be nullprint characters */
 
 var govNames = []string{"Anarchy", "Feudal", "Multi-gov", "Dictatorship",
 	"Communist", "Confederacy", "Democracy", "Corporate State"}
@@ -897,35 +902,24 @@ func (fs *fastSeed) next() int {
 
 	var a int
 
-	//fmt.Printf("\nseed a: %d seed b: %d seed c: %d seed d: %d\n", fs.a, fs.b, fs.c, fs.d)
-
 	x := (fs.a * 2) & 0xFF
-	//fmt.Printf("X: %d\n", x)
-	//fmt.Printf("fs.c: %d\n", fs.c)
-	//fmt.Printf("x + c: %d\n", int(x)+int(fs.c))
 
 	a = int(x) + int(fs.c)
-	//fmt.Printf("a1: %d\n", a)
 
 	if fs.a > 127 {
-		fmt.Printf("A is %d\n", fs.a)
 		a++
 	}
 
-	//fs.a = uint8(a & 0xFF)
 	fs.a = uint8(a) & 0xFF
 	fs.c = x
 
 	a = a >> 8 // a = any carry left from above
-	//fmt.Printf("a2: %d\n", a)
 
 	x = fs.b
 	a = (a + int(x) + int(fs.d)) & 0xFF
-	//fmt.Printf("a3: %d\n", a)
 	fs.b = uint8(a)
 	fs.d = x
 
-	//fmt.Printf("RND NO: %d\n", a)
 	return a
 }
 
@@ -1068,16 +1062,19 @@ func newPlanSys(s *seed) planSys {
 	ps.name = strings.Replace(ps.name, ".", "", -1)
 	//fmt.Println("NAME: " + ps.name)
 
-	ps.description = ps.goatSoup("\x8F is \x97.", ps.goatSoupSeed)
+	rnd := ps.goatSoupSeed
+	ps.description = ps.goatSoup("\x8F is \x97.", &rnd)
 
 	return ps
 }
 
-func (ps *planSys) goatSoup(source string, prng fastSeed) string {
+func (ps *planSys) goatSoup(source string, prng *fastSeed) string {
 
 	var out string
 
 	pairs0 = pairs0 + "\x00" + pairs
+
+	//fmt.Println("SOURCE: " + source)
 
 	desc_list := [][]string{
 		/* 81 0*/ {"fabled", "notable", "well known", "famous", "noted"},
@@ -1130,49 +1127,43 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 			break
 		}
 
-		fmt.Println(source)
 		c := source[0]
+
 		source = source[1:]
 		if strings.Contains(source, "0xB1") {
 			fmt.Println("found token b1")
 		}
 
-		fmt.Printf("\nC is: %d \n", int(c))
-
+		// c less than 128
 		if c < 0x80 {
-			// fmt.Println("C is less than 0x80")
 			out += fmt.Sprintf("%c", c)
 
 		} else {
-
+			//c less than or equal to 164
 			if c <= 0xA4 {
 
 				var rnd = prng.next()
 
-				arg1 := 0
-				arg2 := 0
-				arg3 := 0
-				arg4 := 0
+				element := 0
 
 				if rnd >= 0x33 {
-					arg1 = 1
+					element++
 				}
 				if rnd >= 0x66 {
-					arg2 = 1
+					element++
 				}
 				if rnd >= 0x99 {
-					arg3 = 1
+					element++
 				}
 				if rnd >= 0xCC {
-					arg4 = 1
+					element++
 				}
 
-				fmt.Printf("About to recurse with PRNG values: a=%d, b=%d, c=%d, d=%d\n", prng.a, prng.b, prng.c, prng.d)
-				out += ps.goatSoup(desc_list[c-0x81][arg1+arg2+arg3+arg4], prng)
-				fmt.Println(out)
+				//fmt.Printf("RND: %d LINE: %d ELEMENT: %d\n", rnd, int(c-0x81), element)
+				out += ps.goatSoup(desc_list[c-0x81][element], prng)
 
 			} else {
-				fmt.Println("RUNNING ELSE")
+
 				switch c {
 				case 0xB0: /* planet name */
 
@@ -1200,18 +1191,19 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 					for i := 0; int(i) <= len; i++ {
 
 						x := prng.next() & 0x3e
-						if pairs0[x] != '.' {
-							out += fmt.Sprintf("%c", pairs0[x])
+
+						if pairs1[x] != '.' {
+							out += fmt.Sprintf("%c", pairs1[x])
 						}
 
 						var isnotdot = false
 
-						if pairs0[x+1] != '.' {
+						if pairs1[x+1] != '.' {
 							isnotdot = true
 						}
 
 						if (i != 0) && isnotdot {
-							out += fmt.Sprintf("%c", pairs0[x+1])
+							out += fmt.Sprintf("%c", pairs1[x+1])
 						}
 
 						/*
@@ -1261,7 +1253,7 @@ func printSys(plsy planSys, compressed bool) {
 		rndSeed := plsy.goatSoupSeed
 		fmt.Printf("\n")
 		//fmt.Printf(plsy.description)
-		fmt.Printf(plsy.goatSoup("\x8F is \x97.", rndSeed))
+		fmt.Printf(plsy.goatSoup("\x8F is \x97.", &rndSeed))
 
 	}
 }
@@ -1381,6 +1373,17 @@ func (elite *elite) command(cmd string) {
 }
 
 func main() {
+
+	/* rng test
+	s := newSeed(base0, base1, base2)
+
+	prng := newFastSeed(uint8(s.w1&0xFF), uint8(s.w1>>8), uint8(s.w2&0xFF), uint8(s.w2>>8))
+
+	for i := 0; i < 100000; i++ {
+		fmt.Printf("RND No: %d = %d\n", i, prng.next())
+	}
+	*/
+
 	game := newElite()
 
 	for {
@@ -1390,4 +1393,5 @@ func main() {
 		fmt.Println("COMMAND ENTERED: " + newCmd)
 		game.command(newCmd)
 	}
+
 }
