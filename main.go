@@ -923,45 +923,6 @@ func (fs *fastSeed) next() int {
 	return a
 }
 
-/*
-
-
-var x = (this.a << 1) & 0xFF;
-        var a = x + this.c;
-        if (this.a > 127) {
-            a += 1;
-        }
-        this.a = a & 0xFF;
-        this.c = x;
-
-        a = a >> 8;
-        x = this.b;
-        a = (a + x + this.d) & 0xFF;
-        this.b = a;
-        this.d = x;
-		return a;
-
-
-
-int gen_rnd_number (void)
-{	int a,x;
-	x = (rnd_seed.a * 2) & 0xFF;
-	a = x + rnd_seed.c;
-	if (rnd_seed.a > 127)	a++;
-	rnd_seed.a = a & 0xFF;
-	rnd_seed.c = x;
-
-	a = a / 256;	// a = any carry left from above
-	x = rnd_seed.b;
-	a = (a + x + rnd_seed.d) & 0xFF;
-	rnd_seed.b = a;
-	rnd_seed.d = x;
-
-  printf("\nRND NO: %u\n", a);
-	return a;
-}
-*/
-
 func newSeed(w0, w1, w2 uint16) seed {
 	var newseed seed
 
@@ -991,27 +952,19 @@ func newPlanSys(s *seed) planSys {
 	ps.x = uint(s.w1 >> 8)
 	ps.y = uint(s.w0 >> 8)
 
-	//ps.x = uint(math.Floor(float64(s.w1 >> 8)))
-	//ps.y = uint(math.Floor(float64(s.w0 >> 8)))
-
 	ps.govType = uint((s.w1 >> 3) & 7)
 	ps.economy = uint((s.w0 >> 8) & 7)
-
-	//ps.govType = uint(math.Floor(float64((s.w1 >> 3) & 7))) // bits 3,4 &5 of w1
-
-	//ps.economy = uint(math.Floor((float64((s.w0 >> 8) & 7)))) // bits 8,9 &A of w0
 
 	if ps.govType <= 1 {
 		ps.economy = (ps.economy | 2)
 	}
 
 	ps.techLev = uint((s.w1>>8)&0x03) + uint(ps.economy^0x07)
-	//ps.techLev = uint(math.Floor(float64(((s.w1 >> 8) & 0x03)) + float64(ps.economy^0x07)))
 
 	ps.techLev += ps.govType >> 1
 
 	if ps.govType&0x01 == 1 {
-		/* C simulation of 6502's LSR then ADC */
+
 		ps.techLev++
 	}
 
@@ -1026,7 +979,6 @@ func newPlanSys(s *seed) planSys {
 	// Seed for "goat soup" description
 	ps.goatSoupSeed = newFastSeed(uint8(s.w1&0xFF), uint8(s.w1>>8), uint8(s.w2&0xFF), uint8(s.w2>>8))
 
-	//fmt.Println(ps.goatSoupSeed)
 	// Name
 
 	pair1 := ((s.w2 >> 8) & 0x1F) << 1
@@ -1073,8 +1025,6 @@ func (ps *planSys) goatSoup(source string, prng *fastSeed) string {
 	var out string
 
 	pairs0 = pairs0 + "\x00" + pairs
-
-	//fmt.Println("SOURCE: " + source)
 
 	desc_list := [][]string{
 		/* 81 0*/ {"fabled", "notable", "well known", "famous", "noted"},
@@ -1205,15 +1155,6 @@ func (ps *planSys) goatSoup(source string, prng *fastSeed) string {
 						if (i != 0) && isnotdot {
 							out += fmt.Sprintf("%c", pairs1[x+1])
 						}
-
-						/*
-							if i == 0 {
-								out += fmt.Sprintf("%s", string(pairs0[x]))
-							} else {
-								out += fmt.Sprintf("%s", strings.ToLower(string(pairs0[x])))
-							}
-
-							out += fmt.Sprintf("%s", strings.ToLower(string(pairs0[x+1]))) */
 
 					}
 					break
@@ -1373,16 +1314,6 @@ func (elite *elite) command(cmd string) {
 }
 
 func main() {
-
-	/* rng test
-	s := newSeed(base0, base1, base2)
-
-	prng := newFastSeed(uint8(s.w1&0xFF), uint8(s.w1>>8), uint8(s.w2&0xFF), uint8(s.w2>>8))
-
-	for i := 0; i < 100000; i++ {
-		fmt.Printf("RND No: %d = %d\n", i, prng.next())
-	}
-	*/
 
 	game := newElite()
 
