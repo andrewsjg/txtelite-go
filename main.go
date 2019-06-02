@@ -87,11 +87,16 @@ const base2 = 0xB753 /* Base seed for galaxy 1 */
 //							 "EDORQUANTEISRION";
 
 // 1.5 planet names fix
-var pairs0 = "ABOUSEITILETSTONLONUTHNOALLEXEGEZACEBISOUSESARMAINDIREA.ERATENBERALAVETIEDORQUANTEISRION"
-var pairs = "..LEXEGEZACEBISO" +
-	"USESARMAINDIREA." +
-	"ERATENBERALAVETI" +
-	"EDORQUANTEISRION" /* Dots should be nullprint characters */
+//var pairs0 = "ABOUSEITILETSTONLONUTHNOALLEXEGEZACEBISOUSESARMAINDIREA.ERATENBERALAVETIEDORQUANTEISRION"
+var pairs0 = "ABOUSEITILETSTONLONUTHNO"
+
+//var pairs = "..LEXEGEZACEBISO" +
+var pairs = "..LEXEGEZACEBISOUSESARMAINDIREA.ERATENBERALAVETIEDORQUANTEISRION"
+var pairs1 = pairs0 + pairs
+
+//	"USESARMAINDIREA." +
+//	"ERATENBERALAVETI" +
+//	"EDORQUANTEISRION" /* Dots should be nullprint characters */
 
 var govNames = []string{"Anarchy", "Feudal", "Multi-gov", "Dictatorship",
 	"Communist", "Confederacy", "Democracy", "Corporate State"}
@@ -388,7 +393,7 @@ func (gs *gameState) displaymarket() bool {
 		fmt.Printf("\t%d", gs.shipsHold[i])
 	}
 
-	fmt.Printf("\n\nFuel: %.1f", float32(gs.fuel/10))
+	fmt.Printf("\n\nFuel: %.1f", float32(gs.fuel)/10)
 	fmt.Printf("\tHoldspace: %dt", gs.holdSpace)
 
 	return true
@@ -450,7 +455,7 @@ func (gs *gameState) local() bool {
 	fmt.Printf("Galaxy number %d", gs.galaxyNum)
 
 	for syscount := 0; syscount < galSize; syscount++ {
-		d := distance(gs.galaxy[syscount], gs.galaxy[gs.currentPlanet]) 
+		d := distance(gs.galaxy[syscount], gs.galaxy[gs.currentPlanet])
 		if d <= uint(gs.maxFuel) {
 			if d <= gs.fuel {
 				fmt.Printf("\n * ")
@@ -459,7 +464,7 @@ func (gs *gameState) local() bool {
 			}
 
 			printSys(gs.galaxy[syscount], true)
-			
+
 			fmt.Printf(" (%.1f LY)", (float64(d) / float64(10)))
 		}
 	}
@@ -471,7 +476,7 @@ func (gs *gameState) manageFuel(ammount string) bool {
 
 	x, _ := strconv.Atoi(string(ammount))
 
-	f := uint(x)
+	f := uint(x) * 10
 
 	if f+gs.fuel > uint(gs.maxFuel) {
 		f = uint(gs.maxFuel) - gs.fuel
@@ -479,7 +484,7 @@ func (gs *gameState) manageFuel(ammount string) bool {
 
 	if gs.fuelCost > 0 {
 		fmt.Printf("Cash: %d\n", gs.cash)
-		fmt.Printf("Fuel Cost: %d", gs.fuelCost)
+		fmt.Printf("Fuel Cost: %d\n", gs.fuelCost)
 
 		if int32(f)*int32(gs.fuelCost) > gs.cash {
 
@@ -494,7 +499,7 @@ func (gs *gameState) manageFuel(ammount string) bool {
 	if f == 0 {
 		fmt.Println("\n Can't buy any fuel")
 	} else {
-		fmt.Printf("\nBuying %.1dLY fuel", f/10)
+		fmt.Printf("\nBuying %.1fLY fuel", float64(f)/float64(10))
 	}
 
 	return true
@@ -647,12 +652,14 @@ func (gs *gameState) jump(s string) bool {
 	var d uint
 
 	dest := gs.matchSys(s)
+
 	if dest == gs.currentPlanet {
 		fmt.Println("\nBad jump")
 		return false
 	}
 
 	d = distance(gs.galaxy[dest], gs.galaxy[gs.currentPlanet])
+
 	if d > gs.fuel {
 		fmt.Println("\nJump to far")
 		return false
@@ -724,9 +731,19 @@ func (gs *gameState) matchSys(s string) planetNum {
 
 	var d uint = 9999
 
+	/*
+		{	if (distance(galaxy[syscount],galaxy[currentplanet])<d)
+			{ d=distance(galaxy[syscount],galaxy[currentplanet]);
+			  p=syscount;
+			}
+		  }
+	 	} */
+
 	for sysCount = 0; sysCount < galSize; sysCount++ {
-		if strings.HasPrefix(s, gs.galaxy[sysCount].name) {
+		if strings.HasPrefix(strings.ToUpper(s), gs.galaxy[sysCount].name) {
 			if distance(gs.galaxy[sysCount], gs.galaxy[gs.currentPlanet]) < d {
+
+				d = distance(gs.galaxy[sysCount], gs.galaxy[gs.currentPlanet])
 				p = sysCount
 			}
 		}
@@ -739,13 +756,12 @@ func distance(a planSys, b planSys) uint {
 	/* Seperation between two planets (4*sqrt(X*X+Y*Y/4)) */
 
 	// return (uint)ftoi(4*sqrt((a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y)/4));
-	ax := float64(a.x) 
-	ay := float64(a.y) 
+	ax := float64(a.x)
+	ay := float64(a.y)
 
-	bx := float64(b.x) 
-	by := float64(b.y) 
+	bx := float64(b.x)
+	by := float64(b.y)
 	d := 4 * math.Sqrt((ax-bx)*(ax-bx)+(ay-by)*(ay-by)/4)
-
 
 	return uint(d)
 }
@@ -882,25 +898,69 @@ func newFastSeed(a, b, c, d uint8) fastSeed {
 	return fs
 }
 
-func (fs *fastSeed) next() uint8 {
-	x := (fs.a << 1) & 0xFF
-	a := x + fs.c
+func (fs *fastSeed) next() int {
+
+	var a int
+
+	x := (fs.a * 2) & 0xFF
+
+	a = int(x) + int(fs.c)
 
 	if fs.a > 127 {
 		a++
 	}
 
-	fs.a = a & 0xFF
+	fs.a = uint8(a) & 0xFF
 	fs.c = x
 
 	a = a >> 8 // a = any carry left from above
+
 	x = fs.b
-	a = (a + x + fs.d) & 0xFF
-	fs.b = a
+	a = (a + int(x) + int(fs.d)) & 0xFF
+	fs.b = uint8(a)
 	fs.d = x
 
 	return a
 }
+
+/*
+
+
+var x = (this.a << 1) & 0xFF;
+        var a = x + this.c;
+        if (this.a > 127) {
+            a += 1;
+        }
+        this.a = a & 0xFF;
+        this.c = x;
+
+        a = a >> 8;
+        x = this.b;
+        a = (a + x + this.d) & 0xFF;
+        this.b = a;
+        this.d = x;
+		return a;
+
+
+
+int gen_rnd_number (void)
+{	int a,x;
+	x = (rnd_seed.a * 2) & 0xFF;
+	a = x + rnd_seed.c;
+	if (rnd_seed.a > 127)	a++;
+	rnd_seed.a = a & 0xFF;
+	rnd_seed.c = x;
+
+	a = a / 256;	// a = any carry left from above
+	x = rnd_seed.b;
+	a = (a + x + rnd_seed.d) & 0xFF;
+	rnd_seed.b = a;
+	rnd_seed.d = x;
+
+  printf("\nRND NO: %u\n", a);
+	return a;
+}
+*/
 
 func newSeed(w0, w1, w2 uint16) seed {
 	var newseed seed
@@ -915,7 +975,7 @@ func newSeed(w0, w1, w2 uint16) seed {
 func (s *seed) tweakSeed() {
 	var temp uint16
 
-	temp = ((s.w0) + (s.w1) + (s.w2)) & 0xFFFF // 2 Byte arithmetic
+	temp = ((s.w0) + (s.w1) + (s.w2)) //& 0xFFFF // 2 Byte arithmetic
 	s.w0 = s.w1
 	s.w1 = s.w2
 	s.w2 = temp
@@ -945,7 +1005,7 @@ func newPlanSys(s *seed) planSys {
 		ps.economy = (ps.economy | 2)
 	}
 
-	ps.techLev = uint((s.w1 >> 8) & 0x03) + uint(ps.economy^0x07)
+	ps.techLev = uint((s.w1>>8)&0x03) + uint(ps.economy^0x07)
 	//ps.techLev = uint(math.Floor(float64(((s.w1 >> 8) & 0x03)) + float64(ps.economy^0x07)))
 
 	ps.techLev += ps.govType >> 1
@@ -966,6 +1026,7 @@ func newPlanSys(s *seed) planSys {
 	// Seed for "goat soup" description
 	ps.goatSoupSeed = newFastSeed(uint8(s.w1&0xFF), uint8(s.w1>>8), uint8(s.w2&0xFF), uint8(s.w2>>8))
 
+	//fmt.Println(ps.goatSoupSeed)
 	// Name
 
 	pair1 := ((s.w2 >> 8) & 0x1F) << 1
@@ -1001,94 +1062,108 @@ func newPlanSys(s *seed) planSys {
 	ps.name = strings.Replace(ps.name, ".", "", -1)
 	//fmt.Println("NAME: " + ps.name)
 
-	ps.description = ps.goatSoup("\x8F is \x97.", ps.goatSoupSeed)
+	rnd := ps.goatSoupSeed
+	ps.description = ps.goatSoup("\x8F is \x97.", &rnd)
 
 	return ps
 }
 
-func (ps *planSys) goatSoup(source string, prng fastSeed) string {
+func (ps *planSys) goatSoup(source string, prng *fastSeed) string {
 
 	var out string
 
+	pairs0 = pairs0 + "\x00" + pairs
+
+	//fmt.Println("SOURCE: " + source)
+
 	desc_list := [][]string{
-		/* 81 */ {"fabled", "notable", "well known", "famous", "noted"},
-		/* 82 */ {"very", "mildly", "most", "reasonably", ""},
-		/* 83 */ {"ancient", "\x95", "great", "vast", "pink"},
-		/* 84 */ {"\x9E \x9D plantations", "mountains", "\x9C", "\x94 forests", "oceans"},
-		/* 85 */ {"shyness", "silliness", "mating traditions", "loathing of \x86", "love for \x86"},
-		/* 86 */ {"food blenders", "tourists", "poetry", "discos", "\x8E"},
-		/* 87 */ {"talking tree", "crab", "bat", "lobst", "\xB2"},
-		/* 88 */ {"beset", "plagued", "ravaged", "cursed", "scourged"},
-		/* 89 */ {"\x96 civil war", "\x9B \x98 \x99s", "a \x9B disease", "\x96 earthquakes", "\x96 solar activity"},
-		/* 8A */ {"its \x83 \x84", "the \xB1 \x98 \x99", "its inhabitants' \x9A \x85", "\xA1", "its \x8D \x8E"},
-		/* 8B */ {"juice", "brandy", "water", "brew", "gargle blasters"},
-		/* 8C */ {"\xB2", "\xB1 \x99", "\xB1 \xB2", "\xB1 \x9B", "\x9B \xB2"},
-		/* 8D */ {"fabulous", "exotic", "hoopy", "unusual", "exciting"},
-		/* 8E */ {"cuisine", "night life", "casinos", "sit coms", " \xA1 "},
-		/* 8F */ {"\xB0", "The planet \xB0", "The world \xB0", "This planet", "This world"},
-		/* 90 */ {"n unremarkable", " boring", " dull", " tedious", " revolting"},
-		/* 91 */ {"planet", "world", "place", "little planet", "dump"},
-		/* 92 */ {"wasp", "moth", "grub", "ant", "\xB2"},
-		/* 93 */ {"poet", "arts graduate", "yak", "snail", "slug"},
-		/* 94 */ {"tropical", "dense", "rain", "impenetrable", "exuberant"},
-		/* 95 */ {"funny", "wierd", "unusual", "strange", "peculiar"},
-		/* 96 */ {"frequent", "occasional", "unpredictable", "dreadful", "deadly"},
-		/* 97 */ {"\x82 \x81 for \x8A", "\x82 \x81 for \x8A and \x8A", "\x88 by \x89", "\x82 \x81 for \x8A but \x88 by \x89", "a\x90 \x91"},
-		/* 98 */ {"\x9B", "mountain", "edible", "tree", "spotted"},
-		/* 99 */ {"\x9F", "\xA0", "\x87oid", "\x93", "\x92"},
-		/* 9A */ {"ancient", "exceptional", "eccentric", "ingrained", "\x95"},
-		/* 9B */ {"killer", "deadly", "evil", "lethal", "vicious"},
-		/* 9C */ {"parking meters", "dust clouds", "ice bergs", "rock formations", "volcanoes"},
-		/* 9D */ {"plant", "tulip", "banana", "corn", "\xB2weed"},
-		/* 9E */ {"\xB2", "\xB1 \xB2", "\xB1 \x9B", "inhabitant", "\xB1 \xB2"},
-		/* 9F */ {"shrew", "beast", "bison", "snake", "wolf"},
-		/* A0 */ {"leopard", "cat", "monkey", "goat", "fish"},
-		/* A1 */ {"\x8C \x8B", "\xB1 \x9F \xA2", "its \x8D \xA0 \xA2", "\xA3 \xA4", "\x8C \x8B"},
-		/* A2 */ {"meat", "cutlet", "steak", "burgers", "soup"},
-		/* A3 */ {"ice", "mud", "Zero-G", "vacuum", "\xB1 ultra"},
-		/* A4 */ {"hockey", "cricket", "karate", "polo", "tennis"},
+		/* 81 0*/ {"fabled", "notable", "well known", "famous", "noted"},
+		/* 82 1*/ {"very", "mildly", "most", "reasonably", ""},
+		/* 83 2*/ {"ancient", "\x95", "great", "vast", "pink"},
+		/* 84 3*/ {"\x9E \x9D plantations", "mountains", "\x9C", "\x94 forests", "oceans"},
+		/* 85 4*/ {"shyness", "silliness", "mating traditions", "loathing of \x86", "love for \x86"},
+		/* 86 5*/ {"food blenders", "tourists", "poetry", "discos", "\x8E"},
+		/* 87 6*/ {"talking tree", "crab", "bat", "lobst", "\xB2"},
+		/* 88 7*/ {"beset", "plagued", "ravaged", "cursed", "scourged"},
+		/* 89 8*/ {"\x96 civil war", "\x9B \x98 \x99s", "a \x9B disease", "\x96 earthquakes", "\x96 solar activity"},
+		/* 8A 9*/ {"its \x83 \x84", "the \xB1 \x98 \x99", "its inhabitants' \x9A \x85", "\xA1", "its \x8D \x8E"},
+		/* 8B 10*/ {"juice", "brandy", "water", "brew", "gargle blasters"},
+		/* 8C 11*/ {"\xB2", "\xB1 \x99", "\xB1 \xB2", "\xB1 \x9B", "\x9B \xB2"},
+		/* 8D 12*/ {"fabulous", "exotic", "hoopy", "unusual", "exciting"},
+		/* 8E 13*/ {"cuisine", "night life", "casinos", "sit coms", " \xA1 "},
+		/* 8F 14*/ {"\xB0", "The planet \xB0", "The world \xB0", "This planet", "This world"},
+		/* 90 15*/ {"n unremarkable", " boring", " dull", " tedious", " revolting"},
+		/* 91 16*/ {"planet", "world", "place", "little planet", "dump"},
+		/* 92 17*/ {"wasp", "moth", "grub", "ant", "\xB2"},
+		/* 93 18*/ {"poet", "arts graduate", "yak", "snail", "slug"},
+		/* 94 19*/ {"tropical", "dense", "rain", "impenetrable", "exuberant"},
+		/* 95 20*/ {"funny", "wierd", "unusual", "strange", "peculiar"},
+		/* 96 21*/ {"frequent", "occasional", "unpredictable", "dreadful", "deadly"},
+		/* 97 22*/ {"\x82 \x81 for \x8A", "\x82 \x81 for \x8A and \x8A", "\x88 by \x89", "\x82 \x81 for \x8A but \x88 by \x89", "a\x90 \x91"},
+		/* 98 23*/ {"\x9B", "mountain", "edible", "tree", "spotted"},
+		/* 99 24*/ {"\x9F", "\xA0", "\x87oid", "\x93", "\x92"},
+		/* 9A 25*/ {"ancient", "exceptional", "eccentric", "ingrained", "\x95"},
+		/* 9B 26*/ {"killer", "deadly", "evil", "lethal", "vicious"},
+		/* 9C 27*/ {"parking meters", "dust clouds", "ice bergs", "rock formations", "volcanoes"},
+		/* 9D 28*/ {"plant", "tulip", "banana", "corn", "\xB2weed"},
+		/* 9E 29*/ {"\xB2", "\xB1 \xB2", "\xB1 \x9B", "inhabitant", "\xB1 \xB2"},
+		/* 9F 30*/ {"shrew", "beast", "bison", "snake", "wolf"},
+		/* A0 31*/ {"leopard", "cat", "monkey", "goat", "fish"},
+		/* A1 32*/ {"\x8C \x8B", "\xB1 \x9F \xA2", "its \x8D \xA0 \xA2", "\xA3 \xA4", "\x8C \x8B"},
+		/* A2 33*/ {"meat", "cutlet", "steak", "burgers", "soup"},
+		/* A3 34*/ {"ice", "mud", "Zero-G", "vacuum", "\xB1 ultra"},
+		/* A4 35*/ {"hockey", "cricket", "karate", "polo", "tennis"},
 		/* B0 = <planet name>
-		 *  B1 = <planet name>ian
-		 *  B2 = <random name>
+		 * B1 = <planet name>ian
+		 * B2 = <random name>
 		 */
 	}
 
-	//fmt.Println(desc_list)
 	out = ""
 
 	for {
+
 		if len(source) == 0 {
 			break
 		}
 
 		c := source[0]
-		source = source[1:]
 
+		source = source[1:]
+		if strings.Contains(source, "0xB1") {
+			fmt.Println("found token b1")
+		}
+
+		// c less than 128
 		if c < 0x80 {
 			out += fmt.Sprintf("%c", c)
+
 		} else {
+			//c less than or equal to 164
 			if c <= 0xA4 {
+
 				var rnd = prng.next()
 
-				arg1 := 0
-				arg2 := 0
-				arg3 := 0
-				arg4 := 0
+				element := 0
 
 				if rnd >= 0x33 {
-					arg1 = 1
+					element++
 				}
 				if rnd >= 0x66 {
-					arg2 = 1
+					element++
 				}
 				if rnd >= 0x99 {
-					arg3 = 1
+					element++
 				}
 				if rnd >= 0xCC {
-					arg3 = 1
+					element++
 				}
-				out += ps.goatSoup(desc_list[c-0x81][arg1+arg2+arg3+arg4], prng)
+
+				//fmt.Printf("RND: %d LINE: %d ELEMENT: %d\n", rnd, int(c-0x81), element)
+				out += ps.goatSoup(desc_list[c-0x81][element], prng)
+
 			} else {
+
 				switch c {
 				case 0xB0: /* planet name */
 
@@ -1113,16 +1188,33 @@ func (ps *planSys) goatSoup(source string, prng fastSeed) string {
 
 					len := prng.next() & 3
 
-					for i := 0; uint8(i) <= len; i++ {
+					for i := 0; int(i) <= len; i++ {
 
 						x := prng.next() & 0x3e
-						if i == 0 {
-							out += fmt.Sprintf("%s", string(pairs0[x]))
-						} else {
-							out += fmt.Sprintf("%s", strings.ToLower(string(pairs0[x])))
+
+						if pairs1[x] != '.' {
+							out += fmt.Sprintf("%c", pairs1[x])
 						}
 
-						out += fmt.Sprintf("%s", strings.ToLower(string(pairs0[x+1])))
+						var isnotdot = false
+
+						if pairs1[x+1] != '.' {
+							isnotdot = true
+						}
+
+						if (i != 0) && isnotdot {
+							out += fmt.Sprintf("%c", pairs1[x+1])
+						}
+
+						/*
+							if i == 0 {
+								out += fmt.Sprintf("%s", string(pairs0[x]))
+							} else {
+								out += fmt.Sprintf("%s", strings.ToLower(string(pairs0[x])))
+							}
+
+							out += fmt.Sprintf("%s", strings.ToLower(string(pairs0[x+1]))) */
+
 					}
 					break
 
@@ -1160,8 +1252,8 @@ func printSys(plsy planSys, compressed bool) {
 
 		rndSeed := plsy.goatSoupSeed
 		fmt.Printf("\n")
-		fmt.Printf(plsy.description)
-		fmt.Printf(plsy.goatSoup("\x8F is \x97.", rndSeed))
+		//fmt.Printf(plsy.description)
+		fmt.Printf(plsy.goatSoup("\x8F is \x97.", &rndSeed))
 
 	}
 }
@@ -1174,7 +1266,8 @@ func rotatel(x uint16) uint16 { /* rotate 8 bit number leftwards */
 }
 
 func twist(x uint16) uint16 {
-	return (uint16)((256 * rotatel(x>>8)) + rotatel(x&255))
+	//return (uint16)((256 * rotatel(x>>8)) + rotatel(x&255))
+	return ((256 * rotatel(x>>8)) + rotatel(x&255))
 }
 
 func nextgalaxy(s *seed) seed { /* Apply to base seed; once for galaxy 2  */
@@ -1197,6 +1290,7 @@ func buildGalaxy(galaxynum uint) []planSys {
 
 	for galcount := 1; uint(galcount) < galaxynum; galcount++ {
 		galSeed = nextgalaxy(&galSeed)
+		//fmt.Println(galSeed)
 	}
 
 	/* Put galaxy data into array of structures */
@@ -1249,9 +1343,7 @@ func newElite() elite {
 	elite.state.useNativeRand = true
 	elite.state.mySRand(12345) /* Ensure repeatability */
 
-	elite.state.useNativeRand = true
-
-	fmt.Printf("\nWelcome to Text Elite 1.5.\n")
+	fmt.Printf("\nWelcome to Text Elite 1.4.\n")
 
 	for i := 0; i <= lastTrade; i++ {
 
@@ -1281,6 +1373,17 @@ func (elite *elite) command(cmd string) {
 }
 
 func main() {
+
+	/* rng test
+	s := newSeed(base0, base1, base2)
+
+	prng := newFastSeed(uint8(s.w1&0xFF), uint8(s.w1>>8), uint8(s.w2&0xFF), uint8(s.w2>>8))
+
+	for i := 0; i < 100000; i++ {
+		fmt.Printf("RND No: %d = %d\n", i, prng.next())
+	}
+	*/
+
 	game := newElite()
 
 	for {
@@ -1290,4 +1393,5 @@ func main() {
 		fmt.Println("COMMAND ENTERED: " + newCmd)
 		game.command(newCmd)
 	}
+
 }
