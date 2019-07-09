@@ -472,9 +472,9 @@ func (gs *gameState) local() bool {
 	return true
 }
 
-func (gs *gameState) manageFuel(ammount string) bool {
+func (gs *gameState) manageFuel(amount string) bool {
 
-	x, _ := strconv.Atoi(string(ammount))
+	x, _ := strconv.Atoi(string(amount))
 
 	f := uint(x) * 10
 
@@ -492,10 +492,9 @@ func (gs *gameState) manageFuel(ammount string) bool {
 		}
 	}
 
-	fmt.Printf("F: %d", f)
+	fmt.Printf("F: %d\n", f)
 	gs.fuel += f
 	gs.cash -= int32(gs.fuelCost) * int32(f)
-
 	if f == 0 {
 		fmt.Println("\n Can't buy any fuel")
 	} else {
@@ -507,7 +506,7 @@ func (gs *gameState) manageFuel(ammount string) bool {
 
 func (gs *gameState) manageCash(transaction string) bool {
 
-	var ammount float64
+	var amount float64
 	op := string(transaction[0])
 
 	if op != "+" && op != "-" {
@@ -518,17 +517,17 @@ func (gs *gameState) manageCash(transaction string) bool {
 	tmpFloat, ferr := strconv.ParseFloat(string(transaction[1:]), 64)
 
 	if ferr == nil {
-		ammount = math.Floor(10 * tmpFloat)
+		amount = math.Floor(10 * tmpFloat)
 	} else {
-		ammount = 0
+		amount = 0
 	}
 
 	if op == "+" {
-		gs.cash += int32(ammount)
+		gs.cash += int32(amount)
 	}
 
 	if op == "-" {
-		gs.cash -= int32(ammount)
+		gs.cash -= int32(amount)
 	}
 
 	return true
@@ -1302,7 +1301,7 @@ func newElite() elite {
 	elite.state.parser("cash +100")
 	elite.state.parser("help")
 
-	fmt.Printf("\n\nCash :%d> ", elite.state.cash/10)
+	fmt.Printf("\n\nCash :%.2f> ", float32(elite.state.cash)/float32(10))
 
 	return elite
 }
@@ -1310,7 +1309,7 @@ func newElite() elite {
 func (elite *elite) command(cmd string) {
 	elite.state.parser(cmd)
 
-	fmt.Printf("\n\nCash :%d> ", elite.state.cash/10)
+	fmt.Printf("\n\nCash :%.2f> ", float32(elite.state.cash)/float32(10.00))
 }
 
 func main() {
