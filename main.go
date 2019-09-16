@@ -353,10 +353,10 @@ func newMarket(fluct uint, p planSys) market {
 
 	for i := 0; i <= lastTrade; i++ {
 		//int q
-		product := int16((p.economy)) * (marketCommodities[i].gradient)
-		changing := fluct & (marketCommodities[i].maskByte)
+		product := int((p.economy)) * int((marketCommodities[i].gradient))
+		changing := int(fluct) & int((marketCommodities[i].maskByte))
 
-		q := uint16((marketCommodities[i].baseQuant)) + uint16(changing) - uint16(product)
+		q := int((marketCommodities[i].baseQuant)) + changing - product
 		q = q & 0xFF
 
 		if q&0x80 == 1 {
@@ -365,9 +365,9 @@ func newMarket(fluct uint, p planSys) market {
 
 		market.quantity[i] = uint((q & 0x3F)) /* Mask to 6 bits */
 
-		q = uint16((marketCommodities[i].basePrice) + changing + uint(product))
+		q = int(marketCommodities[i].basePrice) + changing + product
 		q = q & 0xFF
-		market.price[i] = uint(q * 4)
+		market.price[i] = uint(q) * uint(4)
 	}
 
 	market.quantity[alienItems] = 0 /* Override to force nonavailability */
