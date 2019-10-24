@@ -706,7 +706,7 @@ func (gs *gameState) galhyp() bool { /* Jump to next galaxy */
 // Uses reflection to call the function specified in the passed map.
 func doCmd(m map[string]interface{}, name string, params ...interface{}) (result []reflect.Value, err error) {
 	f := reflect.ValueOf(m[name])
-	fmt.Println(name)
+
 	if len(params) != f.Type().NumIn() {
 		err = errors.New("The number of params is not adapted")
 		return
@@ -821,7 +821,7 @@ func (gs *gameState) parser(s string) bool {
 	isValid, _ := strInArray(validCommands, cmd)
 	if isValid {
 
-		// Probably a better way of doing this!
+		// Probably a better way of doing this! I know this is not correct and very nasty!
 
 		if len(args) == 0 {
 			reflectRet, err = doCmd(gs.commands(), cmd)
@@ -1079,9 +1079,6 @@ func (ps *planSys) goatSoup(source string, prng *fastSeed) string {
 		c := source[0]
 
 		source = source[1:]
-		if strings.Contains(source, "0xB1") {
-			fmt.Println("found token b1")
-		}
 
 		// c less than 128
 		if c < 0x80 {
@@ -1320,7 +1317,7 @@ func main() {
 		reader := bufio.NewReader(os.Stdin)
 		newCmd, _ := reader.ReadString('\n')
 		newCmd = strings.TrimSpace(newCmd)
-		fmt.Println("COMMAND ENTERED: " + newCmd)
+		// fmt.Println("COMMAND ENTERED: " + newCmd)
 		game.command(newCmd)
 	}
 
