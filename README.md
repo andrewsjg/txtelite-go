@@ -3,5 +3,7 @@ A text based version of Ian Bell's Elite engine written in Go, translated from t
 
 This is very rough! This version is simply a straight copy with some very ropey type casts going on. Can be greatly improved.
 
-The intention is to make a much more 'Go like' version. This version is just an exercise in converting the C version to Go for fun.
+This version is just an exercise in converting the C version to Go for fun and understanding how the galaxy generation worked in the orginal version. It is by no means clean Go code! 
+
+The intention is to make a much more 'Go like' version in the future. 
 
